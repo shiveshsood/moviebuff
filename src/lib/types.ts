@@ -23,25 +23,18 @@ export interface ClusterLayout {
   genreId: number;
   center: { x: number; y: number };
   movieIds: string[];
+  boundingBox: {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  };
 }
 
 export interface Viewport {
   x: number;
   y: number;
   zoom: number;
-}
-
-/** Movie data waiting to be placed on the canvas by the user */
-export interface PendingMovie {
-  tmdbId: number;
-  title: string;
-  year: number;
-  posterPath: string;
-  rating: number;
-  genres: Genre[];
-  primaryGenre: Genre;
-  isSuggestion: boolean;
-  isAccepted: boolean;
 }
 
 // Genre color mapping — deeper values for contrast on light pastel background
@@ -65,6 +58,29 @@ export const GENRE_COLORS: Record<string, string> = {
   "Western": "#78716C",
   "Family": "#0284C7",
   "TV Movie": "#475569",
+};
+
+// Pastel / icy versions of genre colors — for section backgrounds
+export const GENRE_PASTEL_COLORS: Record<string, string> = {
+  "Science Fiction": "#DBEAFE",
+  "Drama": "#F3E8FF",
+  "Action": "#FEE2E2",
+  "Comedy": "#FEF3C7",
+  "Horror": "#D1FAE5",
+  "Romance": "#FCE7F3",
+  "Thriller": "#E2E8F0",
+  "Fantasy": "#EDE9FE",
+  "Adventure": "#EDE9FE",
+  "Animation": "#E0F2FE",
+  "Documentary": "#F5F5F4",
+  "Crime": "#FEE2E2",
+  "Mystery": "#E2E8F0",
+  "War": "#FEE2E2",
+  "History": "#F5F5F4",
+  "Music": "#FEF3C7",
+  "Western": "#F5F5F4",
+  "Family": "#E0F2FE",
+  "TV Movie": "#E2E8F0",
 };
 
 export const GENRE_GLOW_CLASSES: Record<string, string> = {
@@ -91,6 +107,10 @@ export const GENRE_GLOW_CLASSES: Record<string, string> = {
 
 export function getGenreColor(genreName: string): string {
   return GENRE_COLORS[genreName] || "#94A3B8";
+}
+
+export function getGenrePastelColor(genreName: string): string {
+  return GENRE_PASTEL_COLORS[genreName] || "#F1F5F9";
 }
 
 export function getGenreGlowClass(genreName: string): string {

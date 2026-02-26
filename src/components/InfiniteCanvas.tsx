@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useEffect, useState } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import MovieCard from "./MovieCard";
-import ClusterLabel from "./ClusterLabel";
+import GenreSection from "./GenreSection";
 import SearchBar from "./SearchBar";
 import GenerateButton from "./GenerateButton";
-import GhostCard from "./GhostCard";
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 4;
@@ -15,52 +14,26 @@ export default function InfiniteCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const { movies, viewport, clusters, setViewport, isDraggingCanvas, setIsDraggingCanvas } =
     useCanvasStore();
 
-  const pendingMovie = useCanvasStore((s) => s.pendingMovie);
-  const isPlacingMovie = useCanvasStore((s) => s.isPlacingMovie);
-  const placeMovie = useCanvasStore((s) => s.placeMovie);
-  const cancelPlacement = useCanvasStore((s) => s.cancelPlacement);
-
   // Pan: mouse drag on empty space
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // Only pan on left click and on the canvas itself (not on cards)
       if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest("[data-movie-card]")) return;
-
-      // If placing a movie, place it on click instead of panning
-      if (isPlacingMovie && pendingMovie) {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const rect = container.getBoundingClientRect();
-        // Convert screen coordinates to canvas coordinates
-        const canvasX = (e.clientX - rect.left - viewport.x) / viewport.zoom;
-        const canvasY = (e.clientY - rect.top - viewport.y) / viewport.zoom;
-
-        placeMovie({ x: canvasX - 100, y: canvasY - 170 }); // offset to center card on click point
-        return;
-      }
 
       isPanning.current = true;
       lastMouse.current = { x: e.clientX, y: e.clientY };
       setIsDraggingCanvas(true);
       e.preventDefault();
     },
-    [setIsDraggingCanvas, isPlacingMovie, pendingMovie, placeMovie, viewport]
+    [setIsDraggingCanvas]
   );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      // Track mouse for ghost card
-      if (isPlacingMovie) {
-        setMousePos({ x: e.clientX, y: e.clientY });
-      }
-
       if (!isPanning.current) return;
 
       const dx = e.clientX - lastMouse.current.x;
@@ -72,24 +45,13 @@ export default function InfiniteCanvas() {
         y: viewport.y + dy,
       });
     },
-    [viewport.x, viewport.y, setViewport, isPlacingMovie]
+    [viewport.x, viewport.y, setViewport]
   );
 
   const handleMouseUp = useCallback(() => {
     isPanning.current = false;
     setIsDraggingCanvas(false);
   }, [setIsDraggingCanvas]);
-
-  // Right-click to cancel placement
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      if (isPlacingMovie) {
-        e.preventDefault();
-        cancelPlacement();
-      }
-    },
-    [isPlacingMovie, cancelPlacement]
-  );
 
   // Zoom: scroll wheel centered on cursor
   const handleWheel = useCallback(
@@ -103,12 +65,10 @@ export default function InfiniteCanvas() {
       const cursorX = e.clientX - rect.left;
       const cursorY = e.clientY - rect.top;
 
-      // Calculate zoom
       const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
       const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, viewport.zoom * zoomFactor));
       const zoomRatio = newZoom / viewport.zoom;
 
-      // Adjust position to zoom toward cursor
       const newX = cursorX - (cursorX - viewport.x) * zoomRatio;
       const newY = cursorY - (cursorY - viewport.y) * zoomRatio;
 
@@ -143,18 +103,6 @@ export default function InfiniteCanvas() {
     return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
   }, [setIsDraggingCanvas]);
 
-  // Escape key to cancel placement
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isPlacingMovie) {
-        cancelPlacement();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlacingMovie, cancelPlacement]);
-
   return (
     <div className="relative w-full h-full">
       {/* Navbar */}
@@ -178,23 +126,15 @@ export default function InfiniteCanvas() {
       {/* Canvas */}
       <div
         ref={containerRef}
-        className={`w-full h-full canvas-grid overflow-hidden ${
-          isPlacingMovie ? "placement-mode" : ""
-        }`}
+        className="w-full h-full canvas-grid overflow-hidden"
         style={{
-          cursor: isPlacingMovie
-            ? "crosshair"
-            : isDraggingCanvas
-            ? "grabbing"
-            : "grab",
-          // Scale the dot grid background with zoom
+          cursor: isDraggingCanvas ? "grabbing" : "grab",
           backgroundSize: `${40 * viewport.zoom}px ${40 * viewport.zoom}px`,
           backgroundPosition: `${viewport.x}px ${viewport.y}px`,
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onContextMenu={handleContextMenu}
       >
         {/* Canvas transform layer */}
         <div
@@ -204,9 +144,9 @@ export default function InfiniteCanvas() {
             transformOrigin: "0 0",
           }}
         >
-          {/* Cluster labels */}
+          {/* Genre sections — behind cards */}
           {Array.from(clusters.entries()).map(([genre, cluster]) => (
-            <ClusterLabel key={genre} cluster={cluster} />
+            <GenreSection key={genre} cluster={cluster} />
           ))}
 
           {/* Movie cards */}
@@ -216,7 +156,7 @@ export default function InfiniteCanvas() {
         </div>
 
         {/* Empty state */}
-        {movies.length === 0 && !isPlacingMovie && (
+        {movies.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <p className="text-lg tracking-wide text-muted-foreground">
               Search for a movie to begin
@@ -225,26 +165,8 @@ export default function InfiniteCanvas() {
         )}
       </div>
 
-      {/* Ghost card — follows cursor during placement */}
-      {isPlacingMovie && pendingMovie && (
-        <GhostCard movie={pendingMovie} mouseX={mousePos.x} mouseY={mousePos.y} />
-      )}
-
-      {/* Placement indicator bar */}
-      {isPlacingMovie && pendingMovie && (
-        <div
-          className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 pointer-events-none rounded-none bg-white/90 backdrop-blur-[16px] border border-black/10 font-sans"
-        >
-          <span className="text-sm text-foreground">
-            Click to place{" "}
-            <strong>{pendingMovie.title}</strong>
-            <span className="text-muted-foreground"> — Esc to cancel</span>
-          </span>
-        </div>
-      )}
-
       {/* Generate button — bottom right */}
-      <div className="absolute bottom-8 right-8 z-50 pointer-events-auto">
+      <div className="absolute bottom-8 z-50 pointer-events-auto" style={{ right: 40 }}>
         <GenerateButton />
       </div>
     </div>

@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { MovieCard, PendingMovie, Viewport, ClusterLayout, generateCardRotation } from "@/lib/types";
+import { MovieCard, Viewport, ClusterLayout, generateCardRotation } from "@/lib/types";
+
+const CARD_SPACING_X = 240;
+const CARD_SPACING_Y = 400;
+const CARDS_PER_ROW = 3;
+const CARD_WIDTH = 200;
+const CARD_HEIGHT = 340; // poster 2:3 (300px) + info bar (~40px)
 
 interface CanvasStore {
   // State
@@ -10,25 +16,16 @@ interface CanvasStore {
   isGenerating: boolean;
   suggestionCount: number;
 
-  // Click-to-place state
-  pendingMovie: PendingMovie | null;
-  isPlacingMovie: boolean;
-
   // Viewport actions
   setViewport: (viewport: Partial<Viewport>) => void;
   setIsDraggingCanvas: (dragging: boolean) => void;
 
-  // Movie actions
-  addMovie: (movie: Omit<MovieCard, "position" | "rotation" | "id">) => void;
+  // Movie actions — addMovie returns the new card's position (or null if duplicate)
+  addMovie: (movie: Omit<MovieCard, "position" | "rotation" | "id">) => { x: number; y: number } | null;
   removeMovie: (id: string) => void;
   updateMoviePosition: (id: string, position: { x: number; y: number }) => void;
   acceptSuggestion: (id: string) => void;
   dismissSuggestion: (id: string) => void;
-
-  // Click-to-place actions
-  setPendingMovie: (movie: PendingMovie | null) => void;
-  placeMovie: (canvasPosition: { x: number; y: number }) => void;
-  cancelPlacement: () => void;
 
   // Suggestion actions
   setIsGenerating: (generating: boolean) => void;
@@ -37,10 +34,6 @@ interface CanvasStore {
   // Internal
   recalculateClusters: () => void;
 }
-
-const CARD_SPACING_X = 240;
-const CARD_SPACING_Y = 400;
-const CARDS_PER_ROW = 3;
 
 function calculateClusterPositions(genres: string[]): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>();
@@ -85,8 +78,6 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   isDraggingCanvas: false,
   isGenerating: false,
   suggestionCount: 8,
-  pendingMovie: null,
-  isPlacingMovie: false,
 
   setViewport: (partial) =>
     set((state) => ({
@@ -95,12 +86,12 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
 
   setIsDraggingCanvas: (dragging) => set({ isDraggingCanvas: dragging }),
 
-  // addMovie — used by AI suggestions (auto-places via cluster layout)
+  // addMovie — auto-places into genre cluster, returns position
   addMovie: (movieData) => {
     const state = get();
 
     // Prevent duplicate
-    if (state.movies.some((m) => m.tmdbId === movieData.tmdbId)) return;
+    if (state.movies.some((m) => m.tmdbId === movieData.tmdbId)) return null;
 
     const genreName = movieData.primaryGenre.name;
 
@@ -133,8 +124,10 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       movies: [...state.movies, newMovie],
     }));
 
-    // Recalculate cluster labels (passive — only centroid, no repositioning)
+    // Recalculate cluster labels
     get().recalculateClusters();
+
+    return position;
   },
 
   removeMovie: (id) => {
@@ -169,50 +162,10 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     get().recalculateClusters();
   },
 
-  // Click-to-place: set a pending movie (from search)
-  setPendingMovie: (movie) => {
-    set({ pendingMovie: movie, isPlacingMovie: !!movie });
-  },
-
-  // Click-to-place: place the pending movie at the clicked canvas position
-  placeMovie: (canvasPosition) => {
-    const state = get();
-    if (!state.pendingMovie) return;
-
-    // Prevent duplicate
-    if (state.movies.some((m) => m.tmdbId === state.pendingMovie!.tmdbId)) {
-      set({ pendingMovie: null, isPlacingMovie: false });
-      return;
-    }
-
-    const rotation = generateCardRotation();
-
-    const newMovie: MovieCard = {
-      ...state.pendingMovie,
-      id: `movie-${state.pendingMovie.tmdbId}`,
-      position: canvasPosition,
-      rotation,
-    };
-
-    set((state) => ({
-      movies: [...state.movies, newMovie],
-      pendingMovie: null,
-      isPlacingMovie: false,
-    }));
-
-    // Recalculate cluster labels
-    get().recalculateClusters();
-  },
-
-  // Cancel placement
-  cancelPlacement: () => {
-    set({ pendingMovie: null, isPlacingMovie: false });
-  },
-
   setIsGenerating: (generating) => set({ isGenerating: generating }),
   setSuggestionCount: (count) => set({ suggestionCount: count }),
 
-  // Passive clusters — compute centroids from current movie positions, don't reposition movies
+  // Compute cluster centroids + bounding boxes from current movie positions
   recalculateClusters: () => {
     const state = get();
     const genreGroups = new Map<string, MovieCard[]>();
@@ -232,16 +185,24 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       const centroidX = movies.reduce((sum, m) => sum + m.position.x, 0) / movies.length;
       const centroidY = movies.reduce((sum, m) => sum + m.position.y, 0) / movies.length;
 
+      // Compute bounding box of all cards in this genre
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      movies.forEach((m) => {
+        minX = Math.min(minX, m.position.x);
+        minY = Math.min(minY, m.position.y);
+        maxX = Math.max(maxX, m.position.x + CARD_WIDTH);
+        maxY = Math.max(maxY, m.position.y + CARD_HEIGHT);
+      });
+
       newClusters.set(genre, {
         genre,
         genreId: movies[0].primaryGenre.id,
         center: { x: centroidX, y: centroidY },
         movieIds: movies.map((m) => m.id),
+        boundingBox: { minX, minY, maxX, maxY },
       });
     });
 
-    set({
-      clusters: newClusters,
-    });
+    set({ clusters: newClusters });
   },
 }));

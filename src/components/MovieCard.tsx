@@ -152,7 +152,7 @@ export default function MovieCard({ movie, index }: MovieCardProps) {
           </div>
 
           {/* Info bar */}
-          <CardContent className="card-info-glass p-3">
+          <CardContent className="card-info-glass" style={{ padding: '12px 16px' }}>
             {/* Title + Year */}
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="text-sm font-medium truncate leading-tight text-foreground font-sans">

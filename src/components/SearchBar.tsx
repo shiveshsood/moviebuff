@@ -16,7 +16,9 @@ export default function SearchBar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const setPendingMovie = useCanvasStore((s) => s.setPendingMovie);
+  const addMovie = useCanvasStore((s) => s.addMovie);
+  const setViewport = useCanvasStore((s) => s.setViewport);
+  const viewport = useCanvasStore((s) => s.viewport);
   const movies = useCanvasStore((s) => s.movies);
 
   // Debounced search
@@ -41,7 +43,7 @@ export default function SearchBar() {
     }, 300);
   }, []);
 
-  // Select a movie → set as pending for click-to-place
+  // Select a movie → auto-place into cluster and pan viewport
   const handleSelectMovie = useCallback(
     async (result: TMDBSearchResult) => {
       if (movies.some((m) => m.tmdbId === result.id)) {
@@ -54,7 +56,8 @@ export default function SearchBar() {
       const details = await getMovieDetails(result.id);
       if (!details || !details.genres.length) return;
 
-      setPendingMovie({
+      // Add movie directly — returns the auto-placed position
+      const position = addMovie({
         tmdbId: details.id,
         title: details.title,
         year: details.year || 0,
@@ -66,12 +69,25 @@ export default function SearchBar() {
         isAccepted: false,
       });
 
+      // Pan viewport to center on the new card
+      if (position) {
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        const zoom = viewport.zoom;
+
+        setViewport({
+          x: -position.x * zoom + containerWidth / 2,
+          y: -position.y * zoom + containerHeight / 2,
+          zoom,
+        });
+      }
+
       setQuery("");
       setResults([]);
       setIsOpen(false);
       inputRef.current?.blur();
     },
-    [setPendingMovie, movies]
+    [addMovie, setViewport, viewport.zoom, movies]
   );
 
   // Keyboard navigation
@@ -130,13 +146,14 @@ export default function SearchBar() {
           onFocus={() => results.length > 0 && setIsOpen(true)}
           placeholder="Search for a movie..."
           className={cn(
-            "rounded-none pr-10",
+            "rounded-none",
             "bg-white/70 backdrop-blur-[20px] border-black/10",
             "text-text-primary font-sans placeholder:text-text-secondary"
           )}
+          style={{ paddingLeft: 16, paddingRight: 44, height: 40 }}
         />
         {/* Search icon or loading spinner */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
           {isLoading ? (
             <div
               className="w-4 h-4 border-2 animate-spin"
@@ -181,7 +198,7 @@ export default function SearchBar() {
                 key={result.id}
                 onClick={() => handleSelectMovie(result)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 text-left transition-colors rounded-none",
+                  "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors rounded-none",
                   i === selectedIndex ? "bg-primary/10" : "bg-transparent",
                   isAlreadyAdded ? "opacity-40 cursor-default" : "cursor-pointer"
                 )}
