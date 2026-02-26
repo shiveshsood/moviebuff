@@ -1,0 +1,197 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+/* === shadcn CSS variables === */
+:root {
+  --radius: 0rem;
+  --background: #f8f5ff;
+  --foreground: #1A1A2E;
+  --card: #FFFFFF;
+  --card-foreground: #1A1A2E;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A2E;
+  --primary: #6366F1;
+  --primary-foreground: #FFFFFF;
+  --secondary: #f0edf5;
+  --secondary-foreground: #5A6474;
+  --muted: #f0edf5;
+  --muted-foreground: #5A6474;
+  --accent: #6366F1;
+  --accent-foreground: #FFFFFF;
+  --destructive: #DC2626;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: rgba(0, 0, 0, 0.1);
+  --ring: #6366F1;
+}
+
+/* Bridge shadcn vars into Tailwind v4 */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* === Project theme === */
+@theme {
+  --color-bg-primary: #f8f5ff;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-dot: #C8B8E8;
+  --color-text-primary: #1A1A2E;
+  --color-text-secondary: #5A6474;
+  --color-accent-app: #6366F1;
+  --color-accent-app-hover: #4F46E5;
+
+  /* Genre colors — deeper for light background contrast */
+  --color-genre-scifi: #2563EB;
+  --color-genre-drama: #9333EA;
+  --color-genre-action: #DC2626;
+  --color-genre-comedy: #D97706;
+  --color-genre-horror: #059669;
+  --color-genre-romance: #DB2777;
+  --color-genre-thriller: #475569;
+  --color-genre-fantasy: #7C3AED;
+  --color-genre-animation: #0284C7;
+  --color-genre-documentary: #78716C;
+
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dot-grid background for canvas */
+.canvas-grid {
+  background-color: var(--color-bg-primary);
+  background-image: radial-gradient(circle, var(--color-bg-dot) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Frosted glass effect — light variant */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Card info bar frosted glass — white */
+.card-info-glass {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Genre glow shadows — softer for light theme */
+.glow-scifi { box-shadow: 0 4px 20px rgba(37, 99, 235, 0.2); }
+.glow-drama { box-shadow: 0 4px 20px rgba(147, 51, 234, 0.2); }
+.glow-action { box-shadow: 0 4px 20px rgba(220, 38, 38, 0.2); }
+.glow-comedy { box-shadow: 0 4px 20px rgba(217, 119, 6, 0.2); }
+.glow-horror { box-shadow: 0 4px 20px rgba(5, 150, 105, 0.2); }
+.glow-romance { box-shadow: 0 4px 20px rgba(219, 39, 119, 0.2); }
+.glow-thriller { box-shadow: 0 4px 20px rgba(71, 85, 105, 0.2); }
+.glow-fantasy { box-shadow: 0 4px 20px rgba(124, 58, 237, 0.2); }
+.glow-animation { box-shadow: 0 4px 20px rgba(2, 132, 199, 0.2); }
+.glow-documentary { box-shadow: 0 4px 20px rgba(120, 113, 108, 0.2); }
+
+/* Suggestion card shimmering border */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.shimmer-border {
+  --angle: 0deg;
+  border: 2px solid transparent;
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-image:
+    linear-gradient(#FFFFFF, #FFFFFF),
+    conic-gradient(from var(--angle), #6366F1, #9333EA, #2563EB, #6366F1);
+  animation: shimmer-rotate 4s linear infinite;
+}
+
+@keyframes shimmer-rotate {
+  to {
+    --angle: 360deg;
+  }
+}
+
+/* Suggestion card desaturated poster */
+.suggestion-poster {
+  filter: brightness(0.7) saturate(0.8);
+  transition: filter 0.3s ease;
+}
+
+.suggestion-poster.accepted {
+  filter: brightness(1) saturate(1);
+}
+
+/* Scrollbar hide for canvas */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Placement mode crosshair cursor */
+.placement-mode {
+  cursor: crosshair !important;
+}
