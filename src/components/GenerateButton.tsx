@@ -3,16 +3,53 @@
 import { useState, useCallback } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { getMovieDetails } from "@/lib/tmdb";
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  PopoverRoot,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverBody,
+  PopoverButton,
+  usePopover,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 const COUNT_OPTIONS = [5, 10, 15];
+
+/** Inner component that uses the popover context */
+function GeneratePopoverContent({
+  onGenerate,
+}: {
+  onGenerate: (count: number) => void;
+}) {
+  const { closePopover } = usePopover();
+  const suggestionCount = useCanvasStore((s) => s.suggestionCount);
+  const setSuggestionCount = useCanvasStore((s) => s.setSuggestionCount);
+
+  return (
+    <PopoverContent className="bottom-full mb-2 right-0 left-auto w-[160px] rounded-none border-black/10 bg-white/95 backdrop-blur-[20px]">
+      <PopoverBody className="p-1">
+        {COUNT_OPTIONS.map((count) => (
+          <PopoverButton
+            key={count}
+            onClick={() => {
+              setSuggestionCount(count);
+              closePopover();
+              onGenerate(count);
+            }}
+            className={cn(
+              "rounded-none cursor-pointer text-sm",
+              count === suggestionCount
+                ? "text-primary bg-primary/10 font-medium"
+                : "text-muted-foreground hover:bg-black/5"
+            )}
+          >
+            {count} suggestions
+          </PopoverButton>
+        ))}
+      </PopoverBody>
+    </PopoverContent>
+  );
+}
 
 export default function GenerateButton() {
   const movies = useCanvasStore((s) => s.movies);
@@ -20,18 +57,18 @@ export default function GenerateButton() {
   const isGenerating = useCanvasStore((s) => s.isGenerating);
   const setIsGenerating = useCanvasStore((s) => s.setIsGenerating);
   const suggestionCount = useCanvasStore((s) => s.suggestionCount);
-  const setSuggestionCount = useCanvasStore((s) => s.setSuggestionCount);
   const [error, setError] = useState<string | null>(null);
 
   const userMovies = movies.filter((m) => !m.isSuggestion);
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(async (count?: number) => {
+    const generateCount = count ?? suggestionCount;
     console.log("[Generate] clicked, userMovies:", userMovies.length, "isGenerating:", isGenerating);
     if (userMovies.length === 0 || isGenerating) return;
 
     setIsGenerating(true);
     setError(null);
-    console.log("[Generate] starting generation, count:", suggestionCount);
+    console.log("[Generate] starting generation, count:", generateCount);
 
     try {
       const moviePayload = userMovies.map((m) => ({
@@ -53,7 +90,7 @@ export default function GenerateButton() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             movies: moviePayload,
-            count: suggestionCount,
+            count: generateCount,
           }),
           signal: controller.signal,
         });
@@ -171,48 +208,12 @@ export default function GenerateButton() {
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        {/* Count selector — shadcn DropdownMenu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "rounded-none font-mono",
-                "bg-white/70 border-black/10 text-text-secondary"
-              )}
-            >
-              {suggestionCount}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            side="top"
-            className="rounded-none bg-white/95 backdrop-blur-[20px] border-black/10 min-w-[60px]"
-          >
-            {COUNT_OPTIONS.map((count) => (
-              <DropdownMenuItem
-                key={count}
-                onClick={() => setSuggestionCount(count)}
-                className={cn(
-                  "text-xs font-mono rounded-none cursor-pointer",
-                  count === suggestionCount
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground"
-                )}
-              >
-                {count}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Generate button — shadcn Button */}
-        <Button
-          onClick={handleGenerate}
-          disabled={isGenerating || userMovies.length === 0}
+      {/* Generate button with cult-ui popover */}
+      <PopoverRoot className="justify-end">
+        <PopoverTrigger
+          disabled={isGenerating}
           className={cn(
-            "px-6 rounded-none font-sans",
+            "rounded-none font-sans px-5 border-0",
             isGenerating
               ? "bg-primary/15 text-muted-foreground cursor-wait"
               : "text-white cursor-pointer"
@@ -245,8 +246,10 @@ export default function GenerateButton() {
               Generate
             </span>
           )}
-        </Button>
-      </div>
+        </PopoverTrigger>
+
+        <GeneratePopoverContent onGenerate={handleGenerate} />
+      </PopoverRoot>
     </div>
   );
 }
