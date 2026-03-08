@@ -7,6 +7,26 @@ const CARDS_PER_ROW = 3;
 const CARD_WIDTH = 200;
 const CARD_HEIGHT = 340; // poster 2:3 (300px) + info bar (~40px)
 
+const STORAGE_KEY = "moviebuff-board";
+
+function saveToStorage(movies: MovieCard[]) {
+  try {
+    // Only persist user-added / accepted movies (not pending suggestions)
+    const toSave = movies.filter((m) => !m.isSuggestion || m.isAccepted);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch {}
+}
+
+function loadFromStorage(): MovieCard[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as MovieCard[];
+  } catch {
+    return [];
+  }
+}
+
 interface CanvasStore {
   // State
   movies: MovieCard[];
@@ -26,6 +46,10 @@ interface CanvasStore {
   updateMoviePosition: (id: string, position: { x: number; y: number }) => void;
   acceptSuggestion: (id: string) => void;
   dismissSuggestion: (id: string) => void;
+
+  // Board actions
+  clearBoard: () => void;
+  hydrate: () => void;
 
   // Suggestion actions
   setIsGenerating: (generating: boolean) => void;
@@ -124,8 +148,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       movies: [...state.movies, newMovie],
     }));
 
-    // Recalculate cluster labels
     get().recalculateClusters();
+    saveToStorage(get().movies);
 
     return position;
   },
@@ -135,6 +159,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       movies: state.movies.filter((m) => m.id !== id),
     }));
     get().recalculateClusters();
+    saveToStorage(get().movies);
   },
 
   updateMoviePosition: (id, position) => {
@@ -143,8 +168,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         m.id === id ? { ...m, position } : m
       ),
     }));
-    // Recalculate cluster centroids after drag
     get().recalculateClusters();
+    saveToStorage(get().movies);
   },
 
   acceptSuggestion: (id) => {
@@ -153,6 +178,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         m.id === id ? { ...m, isSuggestion: false, isAccepted: true } : m
       ),
     }));
+    saveToStorage(get().movies);
   },
 
   dismissSuggestion: (id) => {
@@ -160,6 +186,43 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       movies: state.movies.filter((m) => m.id !== id),
     }));
     get().recalculateClusters();
+    saveToStorage(get().movies);
+  },
+
+  clearBoard: () => {
+    set({ movies: [], clusters: new Map() });
+    saveToStorage([]);
+  },
+
+  hydrate: () => {
+    const saved = loadFromStorage();
+    if (saved.length > 0) {
+      set({ movies: saved });
+      get().recalculateClusters();
+
+      // Center viewport on the bounding box of all loaded movies
+      const allMovies = get().movies;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      allMovies.forEach((m) => {
+        minX = Math.min(minX, m.position.x);
+        minY = Math.min(minY, m.position.y);
+        maxX = Math.max(maxX, m.position.x + CARD_WIDTH);
+        maxY = Math.max(maxY, m.position.y + CARD_HEIGHT);
+      });
+
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      const screenW = typeof window !== "undefined" ? window.innerWidth : 1280;
+      const screenH = typeof window !== "undefined" ? window.innerHeight : 800;
+
+      set({
+        viewport: {
+          x: -centerX + screenW / 2,
+          y: -centerY + screenH / 2,
+          zoom: 1,
+        },
+      });
+    }
   },
 
   setIsGenerating: (generating) => set({ isGenerating: generating }),

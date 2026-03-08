@@ -146,11 +146,10 @@ export default function SearchBar() {
           onFocus={() => results.length > 0 && setIsOpen(true)}
           placeholder="Search for a movie..."
           className={cn(
-            "rounded-none",
+            "rounded-none h-10 pl-4 pr-11",
             "bg-white/70 backdrop-blur-[20px] border-black/10",
             "text-text-primary font-sans placeholder:text-text-secondary"
           )}
-          style={{ paddingLeft: 16, paddingRight: 44, height: 40 }}
         />
         {/* Search icon or loading spinner */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2">

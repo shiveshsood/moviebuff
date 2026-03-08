@@ -21,6 +21,7 @@ function getGenreFrameBg(genreColor: string): string {
 export default function MovieCard({ movie, index }: MovieCardProps) {
   const genreColor = getGenreColor(movie.primaryGenre.name);
   const updateMoviePosition = useCanvasStore((s) => s.updateMoviePosition);
+  const removeMovie = useCanvasStore((s) => s.removeMovie);
   const acceptSuggestion = useCanvasStore((s) => s.acceptSuggestion);
   const dismissSuggestion = useCanvasStore((s) => s.dismissSuggestion);
   const viewport = useCanvasStore((s) => s.viewport);
@@ -42,7 +43,7 @@ export default function MovieCard({ movie, index }: MovieCardProps) {
   return (
     <motion.div
       data-movie-card
-      className="absolute"
+      className="absolute group"
       style={{
         left: movie.position.x,
         top: movie.position.y,
@@ -149,10 +150,26 @@ export default function MovieCard({ movie, index }: MovieCardProps) {
                 AI Suggested
               </Badge>
             )}
+
+            {/* Remove button — top right, visible on hover */}
+            {!(movie.isSuggestion && !movie.isAccepted) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeMovie(movie.id);
+                }}
+                className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/70"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <line x1="2" y1="2" x2="10" y2="10" />
+                  <line x1="10" y1="2" x2="2" y2="10" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Info bar */}
-          <CardContent className="card-info-glass" style={{ padding: '12px 16px' }}>
+          <CardContent className="card-info-glass px-4 py-3">
             {/* Title + Year */}
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="text-sm font-medium truncate leading-tight text-foreground font-sans">

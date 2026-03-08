@@ -50,8 +50,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ results });
   } catch (error) {
+    console.error("TMDB fetch exception:", error);
     return NextResponse.json(
-      { error: "Failed to fetch from TMDB" },
+      { error: "Failed to fetch from TMDB", detail: String(error) },
       { status: 500 }
     );
   }
