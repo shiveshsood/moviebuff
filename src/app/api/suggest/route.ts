@@ -49,24 +49,27 @@ export async function POST(request: NextRequest) {
     const anthropic = getClient();
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
+      max_tokens: 2048,
+      system: "You are a cinephile and movie recommendation expert with encyclopedic knowledge of world cinema. Your recommendations are thoughtful, surprising, and tailored — never generic \"top 100\" picks. You notice patterns in collections: thematic threads, directorial preferences, era affinities, and tonal consistency.",
       messages: [
         {
           role: "user",
-          content: `You are a movie recommendation expert. Based on the user's movie collection grouped by genre, suggest exactly ${count} movies they would enjoy that are NOT already in their collection.
+          content: `Here is my movie collection, grouped by genre:
 
-Their collection:
 ${genreSummary}
 
-Rules:
-- Do NOT suggest any of these movies: ${existingTitles.join(", ")}
-- Suggest movies that match the taste patterns you see (era preferences, rating level, genre leanings)
-- Mix in some cross-genre suggestions that bridge their interests
-- Include a brief reason for each suggestion
-- Return ONLY valid JSON, no markdown, no code fences
+Suggest exactly ${count} movies I'd love. Follow these rules:
 
-Return this exact JSON format:
-[{"title": "Movie Title", "year": 2020, "primaryGenre": "Genre Name", "reason": "Brief reason"}]`,
+1. NEVER suggest any of these movies: ${existingTitles.join(", ")}
+2. Read the patterns: if I have multiple 90s thrillers, lean into that era; if my ratings skew high, suggest acclaimed films
+3. ~60% should deepen genres I already like (deeper cuts, not obvious picks)
+4. ~30% should bridge two or more of my genres (e.g., sci-fi + thriller if I like both)
+5. ~10% should be wildcards — critically acclaimed films from genres I haven't explored that match my taste profile
+6. Prefer films that are well-known enough to be on TMDB with poster art
+7. For each suggestion, write a one-sentence reason that references specific movies in my collection
+
+Return ONLY this JSON (no markdown, no code fences):
+[{"title": "Movie Title", "year": 2020, "primaryGenre": "Genre Name", "reason": "Because you loved X, you'll enjoy this for its similar Y"}]`,
         },
       ],
     });

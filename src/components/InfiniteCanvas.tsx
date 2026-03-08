@@ -4,6 +4,8 @@ import { useCallback, useRef, useEffect, useState } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import MovieCard from "./MovieCard";
 import GenreSection from "./GenreSection";
+import SuggestionsSection from "./SuggestionsSection";
+import { SUGGESTIONS_GENRE } from "@/lib/types";
 import SearchBar from "./SearchBar";
 import GenerateButton from "./GenerateButton";
 import WelcomeModal from "./WelcomeModal";
@@ -304,10 +306,14 @@ export default function InfiniteCanvas() {
             transformOrigin: "0 0",
           }}
         >
-          {/* Genre sections — behind cards */}
-          {Array.from(clusters.entries()).map(([genre, cluster]) => (
-            <GenreSection key={genre} cluster={cluster} />
-          ))}
+          {/* Genre sections + Suggestions section — behind cards */}
+          {Array.from(clusters.entries()).map(([genre, cluster]) =>
+            genre === SUGGESTIONS_GENRE ? (
+              <SuggestionsSection key={genre} cluster={cluster} />
+            ) : (
+              <GenreSection key={genre} cluster={cluster} />
+            )
+          )}
 
           {/* Movie cards */}
           {movies.map((movie, index) => (

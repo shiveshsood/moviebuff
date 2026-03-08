@@ -117,6 +117,9 @@ export function getGenreGlowClass(genreName: string): string {
   return GENRE_GLOW_CLASSES[genreName] || "glow-thriller";
 }
 
+/** Sentinel cluster key for the AI suggestions section */
+export const SUGGESTIONS_GENRE = "__suggestions__";
+
 /** Generate a random rotation for a card: -15 to +15 deg, ~20% chance of 0 */
 export function generateCardRotation(): number {
   if (Math.random() < 0.2) return 0;

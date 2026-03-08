@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useCanvasStore } from "@/store/canvasStore";
 import { getMovieDetails } from "@/lib/tmdb";
+import { SUGGESTIONS_GENRE } from "@/lib/types";
 import {
   PopoverRoot,
   PopoverTrigger,
@@ -111,6 +112,9 @@ export default function GenerateButton() {
   const isGenerating = useCanvasStore((s) => s.isGenerating);
   const setIsGenerating = useCanvasStore((s) => s.setIsGenerating);
   const suggestionCount = useCanvasStore((s) => s.suggestionCount);
+  const setViewport = useCanvasStore((s) => s.setViewport);
+  const clusters = useCanvasStore((s) => s.clusters);
+  const viewport = useCanvasStore((s) => s.viewport);
   const [error, setError] = useState<string | null>(null);
 
   const userMovies = movies.filter((m) => !m.isSuggestion);
@@ -264,6 +268,20 @@ export default function GenerateButton() {
           );
         }
 
+        // Pan viewport to center on the suggestions section
+        const suggestionsCluster = useCanvasStore.getState().clusters.get(SUGGESTIONS_GENRE);
+        if (suggestionsCluster) {
+          const { center } = suggestionsCluster;
+          const zoom = useCanvasStore.getState().viewport.zoom;
+          const screenW = window.innerWidth;
+          const screenH = window.innerHeight;
+          useCanvasStore.getState().setViewport({
+            x: -center.x * zoom + screenW / 2,
+            y: -center.y * zoom + screenH / 2,
+            zoom,
+          });
+        }
+
         console.log(
           `[Generate] done, added ${addedCount}/${suggestions.length} suggestions`
         );
@@ -275,7 +293,7 @@ export default function GenerateButton() {
         console.log("[Generate] finished, isGenerating reset to false");
       }
     },
-    [userMovies, isGenerating, suggestionCount, setIsGenerating, addMovie]
+    [userMovies, isGenerating, suggestionCount, setIsGenerating, addMovie, setViewport]
   );
 
   return (
